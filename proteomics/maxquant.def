@@ -1,0 +1,94 @@
+Bootstrap: docker
+From: ubuntu:20.04
+
+%files
+	# MaxQuant zip in current location
+	$PWD/MaxQuant_2.0.3.1.zip /opt
+
+%post
+	# Install Misc
+	apt-get update -y && apt-get upgrade -y
+	apt-get install wget tar unzip -y
+	apt-get install libgtk2.0-0 -y
+	DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata
+
+	# Install Mono
+	apt install gnupg ca-certificates -y
+	apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+	echo "deb https://download.mono-project.com/repo/ubuntu stable-focal main" | tee /etc/apt/sources.list.d/mono-official-stable.list
+	apt update -y
+	apt-get -y install mono-devel
+	apt-get -y install mono-complete
+
+	# Install MaxQuant
+	cd /opt
+	unzip /opt/MaxQuant_2.0.3.1.zip
+	mv MaxQuant_2.0.3.1 MaxQuant
+	chmod -R a+rX /opt/MaxQuant
+
+	# Get .NET binaries
+	[ ! -f /tmp/dotnet-sdk-2.1.811-linux-x64.tar.gz ] && wget -P /tmp https://download.visualstudio.microsoft.com/download/pr/4281b67c-db32-4e7e-aa67-976a59839b81/75373c7621c37c2ac7a83fc60d415afd/dotnet-sdk-2.1.811-linux-x64.tar.gz
+	[ ! -f /tmp/aspnetcore-runtime-2.1.23-linux-x64.tar.gz ] && wget -P /tmp https://download.visualstudio.microsoft.com/download/pr/3422a123-3f37-4544-b0ed-e3922b50e1b0/c34c607ba18a67763bacded434607c56/aspnetcore-runtime-2.1.23-linux-x64.tar.gz
+	mkdir /opt/dotnet
+	tar zxf /tmp/dotnet-sdk-2.1.811-linux-x64.tar.gz -C "/opt/dotnet"
+	tar zxf /tmp/aspnetcore-runtime-2.1.23-linux-x64.tar.gz -C "/opt/dotnet"
+
+	# Update and clean
+	rm /opt/MaxQuant_2.0.3.1.zip
+	apt-get update -y && apt-get upgrade -y
+	apt-get clean -y
+
+%environment
+	export LC_ALL=C
+	export DOTNET_ROOT=/opt/dotnet
+	export PATH=$PATH:/opt/dotnet
+
+# MaxQuantCmd.exe
+
+%apphelp MaxQuantCmd.exe
+
+usage: singularity run --app MaxQuantCmd.exe mqpar.xml
+
+MaxQuantCmd 2.0.3.1
+Copyright ? Max-Planck-Institute of Biochemistry 2021
+USAGE:
+Complete run of an existing mqpar.xml file:
+  MaxQuantCmd.exe mqpar.xml
+Print job ids/names table:
+  MaxQuantCmd.exe --dryrun mqpar.xml
+Rerunning second and third parts of the analysis:
+  MaxQuantCmd.exe --partial-processing-end=3 --partial-processing=1 mqpar.xml
+Changing folder location for fasta files and raw files for a given mqpar file:
+  MaxQuantCmd.exe --changeFolder="<new mqpar.xml>" "<new folder with fasta files>" "<new folder with raw files>" mqpar.xml
+
+  -p, --partial-processing        (Default: 1) Start processing from the specified job id. Can be used to continue/redo parts of the processing. Job id's can be obtained in the MaxQuant GUI partial processing view or from --dryrun
+                                  option. The first job id is 1.
+
+  -e, --partial-processing-end    (Default: 2147483647) Finish processing at the specified job id. 1-based indexing is used.
+
+  -n, --dryrun                    Print job ids and job names table.
+
+  -c, --create                    Create a template of MaxQuant parameter file.
+
+  -f, --changeFolder              Change folder location for fasta and raw files (presuming all raw files are in the same folder). Expecting three locations separated by space. 1) path to the mqpar file 2) path to the fasta file(s)
+                                  3) path to the raw files.
+
+  --help                          Display this help screen.
+
+  --version                       Display version information.
+
+  mqpar (pos. 0)                  Required. Path to the mqpar.xml file. If you do not have an mqpar.xml, you can generate one using the MaxQuant GUI or use --create option.
+
+%apprun MaxQuantCmd.exe
+
+    exec mono /opt/MaxQuant/bin/MaxQuantCmd.exe "$@"
+
+# MaxQuantGui.exe
+
+%apphelp MaxQuantGui.exe
+
+    usage: singularity run --app MaxQuantGui.exe
+
+%apprun MaxQuantGui.exe
+
+    exec mono /opt/MaxQuant/bin/MaxQuantGui.exe
