@@ -1,0 +1,31 @@
+Bootstrap: docker 
+From: centos:centos7.7.1908
+
+%post
+	yum install epel-release -y
+	yum install git -y
+	yum groupinstall 'Development Tools' -y
+	yum install python3-devel -y
+	yum install glew-devel -y
+	yum install libpng-devel -y
+	yum install freetype-devel -y
+	yum install libxml2-devel -y
+	yum install msgpack -y
+	yum install python36-qt5-base -y
+	yum install glm-devel -y
+	yum install netcdf-devel -y
+	yum update -y
+	
+	mkdir -p /opt/tmp
+	cd /opt/tmp
+	git clone https://github.com/schrodinger/pymol-open-source.git
+	git clone https://github.com/rcsb/mmtf-cpp.git
+	mv mmtf-cpp/include/mmtf* pymol-open-source/include/
+	cd pymol-open-source
+	python3 setup.py build install --prefix=/opt/pymol
+
+	rm -rf /opt/tmp
+
+%environment
+    export PATH=$PATH:/opt/pymol/bin
+    export PYMOL_PATH=/opt/pymol
