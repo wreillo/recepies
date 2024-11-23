@@ -1,2 +1,2 @@
-# containers
-Recipes for Singularity (*.def) and/or Docker (*.dockerfile) containers
+# Recepies
+Contain recipes for containers (apptainer.def and Dockerfile) and other environments.
